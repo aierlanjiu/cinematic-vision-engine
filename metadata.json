@@ -1,0 +1,5 @@
+{
+  "name": "Cinematic Vision Engine",
+  "description": "A high-fidelity visual computation interface using the Dotey_Logic_Structure to transform semantic concepts into photorealistic render instructions and generated imagery.",
+  "requestFramePermissions": []
+}

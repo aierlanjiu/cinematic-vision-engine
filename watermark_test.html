@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watermark Test</title>
+    <style>
+        body {
+            margin: 0;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        canvas {
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        // --- ICON PATHS ---
+        const APPLE_ICON = new Path2D("M17.7,11.8c-0.9,0-2.3-0.5-3.6-0.5c-1.4,0-2.9,0.5-3.8,0.5c-1.9,0-3.9-1.8-3.9-4.4c0-2.3,1.5-3.5,2.9-3.5c1.2,0,2.3,0.8,3,0.8c0.7,0,1.7-0.9,3.1-0.9c0.5,0,2.3,0.2,3.3,1.7c-0.1,0-0.7,0.4-0.9,0.5c-1.5,1.1-1.3,3.3,0.1,3.9c0.1,0,0.1,0,0.2,0.1c-0.4,1.4-1.3,2.8-2.3,2.8C15.3,12.8,14.9,12.5,14.7,12.3L17.7,11.8z M13.8,3.2c0.7-0.9,0.6-2.2,0.6-2.2s-1.2,0.1-2.4,1.4c-0.6,0.7-1.1,1.7-1,2.6C12.1,5.1,13.2,4,13.8,3.2z");
+
+        // Android Icon - Geometric Construction (Head + Body + Antennae)
+        const ANDROID_ICON = (() => {
+            const path = new Path2D();
+            // Left Antenna
+            path.moveTo(6, 2);
+            path.lineTo(4, 0);
+            // Right Antenna  
+            path.moveTo(14, 2);
+            path.lineTo(16, 0);
+            // Head (circle)
+            path.arc(10, 6, 4, 0, Math.PI * 2);
+            // Left Eye
+            path.moveTo(8, 6);
+            path.arc(8, 6, 0.5, 0, Math.PI * 2);
+            // Right Eye
+            path.moveTo(12, 6);
+            path.arc(12, 6, 0.5, 0, Math.PI * 2);
+            // Body (rounded rectangle)
+            path.roundRect(6, 10, 8, 7, 1);
+            // Left Arm
+            path.roundRect(4, 11, 1.5, 5, 0.75);
+            // Right Arm
+            path.roundRect(14.5, 11, 1.5, 5, 0.75);
+            // Left Leg
+            path.roundRect(7, 17.5, 1.5, 4, 0.75);
+            // Right Leg
+            path.roundRect(11.5, 17.5, 1.5, 4, 0.75);
+            return path;
+        })();
+
+        // HarmonyOS Icon - Detailed Path (Circle with Horizontal Lines)
+        const HARMONY_ICON = (() => {
+            const path = new Path2D();
+            // Outer Circle
+            path.arc(10, 10, 8, 0, Math.PI * 2);
+            // Inner horizontal lines pattern
+            path.moveTo(4, 7);
+            path.lineTo(16, 7);
+            path.moveTo(4, 10);
+            path.lineTo(16, 10);
+            path.moveTo(4, 13);
+            path.lineTo(16, 13);
+            return path;
+        })();
+
+        // 4K HD Badge
+        const BADGE_4K = new Path2D("M2,4h2v3h2V4h2v8H6V9H4v3H2V4z M9,4h2v3.5L13.5,4h2.5l-3,4l3.5,4h-2.5L11,8.5V12H9V4z");
+
+        const drawIcon = (ctx, path, x, y, scale) => {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.shadowColor = 'rgba(0,0,0,0.2)';
+            ctx.shadowBlur = 4;
+            ctx.fill(path);
+            ctx.restore();
+        };
+
+        const drawWatermarkOverlay = (ctx, width, height, serial) => {
+            ctx.save();
+
+            // 1. Premium Glass Gradient Footer (Taller for centered design)
+            const gradientHeight = height * 0.22;
+            const gradient = ctx.createLinearGradient(0, height - gradientHeight, 0, height);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.3, 'rgba(0,0,0,0.25)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.7)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, height - gradientHeight, width, gradientHeight);
+
+            // Layout Constants - Centered Design
+            const centerX = width / 2;
+            const brandingY = height - (width * 0.08);
+            const iconsY = height - (width * 0.045);
+            const copyrightY = height - (width * 0.018);
+
+            // 2. CENTER: Large Calligraphy Branding
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Main Brand Text - Large Calligraphy Style
+            ctx.font = `700 ${width * 0.055}px "STKaiti", "KaiTi", "楷体", serif`;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.letterSpacing = '0.05em';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetY = 2;
+            ctx.fillText("雪沐江南", centerX, brandingY);
+
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            // 3. CENTER: Tech Stack Icons (Horizontal Row)
+            const iconSize = width * 0.028;
+            const iconScale = iconSize / 20;
+            const iconSpacing = width * 0.045;
+            const totalIconWidth = (iconSpacing * 3); // 4 icons, 3 gaps
+            let currentX = centerX - totalIconWidth / 2;
+
+            // Draw icons left-to-right (centered)
+            // Apple
+            drawIcon(ctx, APPLE_ICON, currentX - iconSize / 2, iconsY - iconSize / 2, iconScale);
+            currentX += iconSpacing;
+
+            // Android
+            drawIcon(ctx, ANDROID_ICON, currentX - iconSize / 2, iconsY - iconSize / 2, iconScale);
+            currentX += iconSpacing;
+
+            // HarmonyOS
+            drawIcon(ctx, HARMONY_ICON, currentX - iconSize / 2, iconsY - iconSize / 2, iconScale);
+            currentX += iconSpacing;
+
+            // 4K Badge
+            drawIcon(ctx, BADGE_4K, currentX - iconSize / 2, iconsY - iconSize / 2, iconScale);
+
+            // 4. CENTER: Serial & Copyright
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `300 ${width * 0.0095}px "Inter", -apple-system, sans-serif`;
+            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.letterSpacing = '0.08em';
+            ctx.fillText(`${serial} • 2025 ALL RIGHTS RESERVED`, centerX, copyrightY);
+
+            ctx.restore();
+        };
+
+        // --- INIT ---
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Simulate a wallpaper size (scaled down for view)
+        const width = 1536 / 2;
+        const height = 2752 / 2;
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw dummy background
+        const grd = ctx.createLinearGradient(0, 0, 0, height);
+        grd.addColorStop(0, '#2c3e50');
+        grd.addColorStop(1, '#3498db');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw Watermark
+        drawWatermarkOverlay(ctx, width, height, "SMJN-2025-TEST");
+
+    </script>
+</body>
+
+</html>
