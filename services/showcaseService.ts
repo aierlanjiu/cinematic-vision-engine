@@ -154,43 +154,50 @@ export const generateShowcaseAssets = async (
     image: GeneratedImage,
     icons: IconAssets,
     serialNumber: string,
-    // scene and bgModel are kept for compatibility but might be unused in new logic
     scene: any = 'blur',
-    bgModel: string = 'gemini-3-pro-image-preview' // Default to Pro model for high quality showcases
+    bgModel: string = 'gemini-3-pro-image-preview'
 ): Promise<RenderedAsset[]> => {
     const newAssets: RenderedAsset[] = [];
+    const isWide = image.aspectRatio === '21:9';
 
-    // --- 1. PHONE MOCKUP (9:16) ---
-    try {
-        const prompt = fillPrompt(SHOWCASE_PROMPTS.phoneMockup, image, serialNumber);
-        const url = await generateShowcaseImage(image.url, prompt, '9:16', bgModel);
+    // --- LOGIC: ORIENTATION SPECIFIC SHOWCASES ---
 
-        newAssets.push({
-            type: 'mockup',
-            label: 'Phone Mockup (9:16)',
-            url: url,
-            resolution: '9:16'
-        });
-    } catch (e) {
-        console.error("Failed to generate Phone Mockup", e);
+    if (isWide) {
+        // --- WIDE (21:9) -> DESKTOP MONITOR SETUP ---
+        try {
+            // Use the new specific desktopMonitor prompt for wide images
+            const prompt = fillPrompt(SHOWCASE_PROMPTS.desktopMonitor, image, serialNumber);
+            // Generate in 3:4 for the showcase image itself to capture the desk width
+            const url = await generateShowcaseImage(image.url, prompt, '3:4', bgModel);
+
+            newAssets.push({
+                type: 'mockup',
+                label: 'Desktop Setup (Ultrawide)',
+                url: url,
+                resolution: '3:4'
+            });
+        } catch (e) {
+            console.error("Failed to generate Desktop Setup", e);
+        }
+
+    } else {
+        // --- VERTICAL (9:16) -> PHONE MOCKUP ---
+        try {
+            const prompt = fillPrompt(SHOWCASE_PROMPTS.phoneMockup, image, serialNumber);
+            const url = await generateShowcaseImage(image.url, prompt, '3:4', bgModel);
+
+            newAssets.push({
+                type: 'mockup',
+                label: 'Phone Mockup (3:4)',
+                url: url,
+                resolution: '3:4'
+            });
+        } catch (e) {
+            console.error("Failed to generate Phone Mockup", e);
+        }
     }
 
-    // --- 2. DESK SETUP (3:4) ---
-    try {
-        const prompt = fillPrompt(SHOWCASE_PROMPTS.deskSetup, image, serialNumber);
-        const url = await generateShowcaseImage(image.url, prompt, '3:4', bgModel);
-
-        newAssets.push({
-            type: 'mockup',
-            label: 'Desk Setup (3:4)',
-            url: url,
-            resolution: '3:4'
-        });
-    } catch (e) {
-        console.error("Failed to generate Desk Setup", e);
-    }
-
-    // --- 3. SOCIAL MEDIA NOTE (3:4) ---
+    // --- SOCIAL MEDIA NOTE (3:4) ---
     try {
         const prompt = fillPrompt(SHOWCASE_PROMPTS.socialNote, image, serialNumber);
         const url = await generateShowcaseImage(image.url, prompt, '3:4', bgModel);

@@ -48,6 +48,7 @@ const App: React.FC = () => {
     const [driveService, setDriveService] = useState<DriveService | null>(null);
     const [uploadProgress, setUploadProgress] = useState<{ current: number, total: number } | null>(null);
     const [zipProgress, setZipProgress] = useState<number | null>(null);
+    const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
 
     // Load History from IndexedDB on Mount
     useEffect(() => {
@@ -325,7 +326,9 @@ const App: React.FC = () => {
                 });
             }
 
-            const content = await zip.generateAsync({ type: "blob" });
+            const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
+                setDownloadProgress(metadata.percent);
+            });
             const url = URL.createObjectURL(content);
             const link = document.createElement('a');
             link.href = url;
@@ -340,6 +343,7 @@ const App: React.FC = () => {
             alert("Failed to download bundle.");
         } finally {
             setCurrentStatus("");
+            setDownloadProgress(null);
         }
     };
 
@@ -355,26 +359,43 @@ const App: React.FC = () => {
             const rootFolder = zip.folder(`Collection_${commonId}`);
 
             if (rootFolder) {
-                for (const img of images) {
-                    const serial = `SMJN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-                    const assets = await generateShowcaseAssets(img, icons, serial);
-                    const imgFolder = rootFolder.folder(`${img.pipeline || 'Default'}_${img.aspectRatio === '21:9' ? 'Wide' : 'Vert'}`);
+                // Group by Pipeline
+                const pipelineGroups: Record<string, GeneratedImage[]> = {};
+                images.forEach(img => {
+                    const p = img.pipeline || 'Other';
+                    if (!pipelineGroups[p]) pipelineGroups[p] = [];
+                    pipelineGroups[p].push(img);
+                });
 
-                    if (imgFolder) {
-                        // Add original
-                        const originalBase64 = img.url.replace(/^data:image\/(png|jpeg|webp);base64,/, "");
-                        imgFolder.file(`Original.png`, originalBase64, { base64: true });
+                // Process each pipeline group
+                for (const [pipeline, groupImages] of Object.entries(pipelineGroups)) {
+                    const pipelineFolder = rootFolder.folder(`Pipeline_${pipeline}`);
 
-                        // Add assets
-                        assets.forEach(asset => {
-                            const assetBase64 = asset.url.replace(/^data:image\/(png|jpeg|webp);base64,/, "");
-                            imgFolder.file(`${asset.label.replace(/\s+/g, '_')}.png`, assetBase64, { base64: true });
-                        });
+                    if (pipelineFolder) {
+                        for (const img of groupImages) {
+                            const orientation = img.aspectRatio === '21:9' ? 'Wide' : 'Vertical';
+                            const serial = `SMJN-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+                            // Generate Assets
+                            const assets = await generateShowcaseAssets(img, icons, serial);
+
+                            // Add Original
+                            const originalBase64 = img.url.replace(/^data:image\/(png|jpeg|webp);base64,/, "");
+                            pipelineFolder.file(`${orientation}_Original.png`, originalBase64, { base64: true });
+
+                            // Add Assets with Orientation Prefix
+                            assets.forEach(asset => {
+                                const assetBase64 = asset.url.replace(/^data:image\/(png|jpeg|webp);base64,/, "");
+                                pipelineFolder.file(`${orientation}_${asset.label.replace(/\s+/g, '_')}.png`, assetBase64, { base64: true });
+                            });
+                        }
                     }
                 }
             }
 
-            const content = await zip.generateAsync({ type: "blob" });
+            const content = await zip.generateAsync({ type: "blob" }, (metadata) => {
+                setDownloadProgress(metadata.percent);
+            });
             const url = URL.createObjectURL(content);
             const link = document.createElement('a');
             link.href = url;
@@ -389,6 +410,7 @@ const App: React.FC = () => {
             alert("Failed to download collection.");
         } finally {
             setCurrentStatus("");
+            setDownloadProgress(null);
         }
     };
 
@@ -984,6 +1006,25 @@ const App: React.FC = () => {
                         image={activeShowcaseImage}
                         onClose={() => setActiveShowcaseImage(null)}
                     />
+                )}
+
+                {/* Global Download Progress Overlay */}
+                {downloadProgress !== null && (
+                    <div className="fixed bottom-8 right-8 z-50 animate-fadeIn">
+                        <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl flex items-center gap-4">
+                            <div className="relative w-12 h-12 flex items-center justify-center">
+                                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                    <path className="text-white/10" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                                    <path className="text-indigo-500 transition-all duration-200 ease-out" strokeDasharray={`${downloadProgress}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                                </svg>
+                                <span className="absolute text-[10px] font-bold text-white">{Math.round(downloadProgress)}%</span>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-white">Downloading...</h4>
+                                <p className="text-xs text-white/50">Packaging assets</p>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* Cloud Config Modal */}

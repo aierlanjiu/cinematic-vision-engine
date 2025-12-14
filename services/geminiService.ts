@@ -38,7 +38,7 @@ export const generateCinematicPrompt = async (
       });
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro',
+        model: 'gemini-3-pro-preview',
         contents: `Execute protocol for: ${inputJson}. Return ONLY the raw prompt string starting with /imagine prompt:`,
         config: {
           systemInstruction: SYSTEM_META_PROTOCOL,

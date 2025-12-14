@@ -412,6 +412,16 @@ Overlay minimal, trendy typography on top or bottom (not covering the face/main 
 Text to include conceptually: "\${batchId}", "\${entityName}". 
 Style: Trendy graphic design, high-saturation, poster design, e-commerce listing style.
 Tags visible: #\${universeName} #\${charName}
+\${watermarkInstruction}`,
+
+  desktopMonitor: `The input image is the digital wallpaper design.
+Generate a High-End Battlestation / Desktop Setup Photography shot.
+
+Subject: A massive **Curved Ultrawide Monitor (34-inch)** resting on a premium desk.
+Content: The monitor screen MUST be displaying the PROVIDED INPUT IMAGE (the anime wallpaper) clearly and vividly.
+Props: RGB mechanical keyboard, gaming mouse, ambient bias lighting matching the wallpaper's color palette (\${themeColor}).
+Atmosphere: Immersive, cinematic, high-tech, "Dream Desk" aesthetic.
+Focus: Sharp focus on the screen content, with a pleasing bokeh background.
 \${watermarkInstruction}`
 };
 
